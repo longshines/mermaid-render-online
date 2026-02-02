@@ -3,7 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Beautiful Mermaid Pro - 在线工具</title>
+    <title>Beautiful Mermaid 在线工具 - 高颜值流程图渲染</title>
+    <meta
+      name="description"
+      content="基于 beautiful-mermaid 的高性能在线编辑器，支持 15 种专业主题、实时预览和 ASCII 导出。"
+    />
+    <meta property="og:title" content="Beautiful Mermaid Online Editor" />
+    <meta
+      property="og:image"
+      content="https://github.com/lukilabs/beautiful-mermaid/raw/main/hero.png"
+    />
     <style>
       :root {
         --bg: #1a1b26;
@@ -122,6 +131,20 @@
       .btn-secondary:hover {
         background: rgba(122, 162, 247, 0.1);
       }
+      @media (max-width: 768px) {
+        main {
+          flex-direction: column;
+        }
+        #editor {
+          width: 100%;
+          height: 40%;
+          border-right: none;
+          border-bottom: 1px solid #333;
+        }
+        #preview-container {
+          height: 60%;
+        }
+      }
     </style>
   </head>
   <body>
@@ -133,6 +156,7 @@
       <div class="controls">
         <select id="theme-select"></select>
         <button class="btn-secondary" onclick="beautifyCode()">美化代码</button>
+        <button onclick="copySVG()">复制 SVG</button>
         <button onclick="copyASCII()">复制 ASCII</button>
         <button class="btn-primary" onclick="downloadSVG()">
           下载 SVG图片
@@ -234,6 +258,15 @@
           a.href = url;
           a.download = `mermaid-chart.svg`;
           a.click();
+        };
+
+        // 在这里插入
+        window.copySVG = () => {
+          const svg = document.getElementById("preview").innerHTML;
+          if (!svg) return;
+          navigator.clipboard
+            .writeText(svg)
+            .then(() => alert("SVG 代码已复制到剪贴板"));
         };
 
         window.copyASCII = () => {
