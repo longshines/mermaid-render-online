@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beautiful Mermaid Pro - 在线工具</title>
+    <style>
+      :root {
+        --bg: #1a1b26;
+        --panel: #24283b;
+        --text: #a9b1d6;
+        --accent: #7aa2f7;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: var(--bg);
+        color: #fff;
+        overflow: hidden;
+      }
+
+      /* 顶部导航 */
+      header {
+        padding: 0.8rem 1.5rem;
+        border-bottom: 1px solid #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--bg);
+        z-index: 10;
+      }
+      .logo-area {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #save-status {
+        font-size: 12px;
+        color: #565f89;
+        transition: opacity 0.3s;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      /* 主体布局 */
+      main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+      #editor {
+        width: 45%;
+        background: var(--panel);
+        color: var(--text);
+        border: none;
+        padding: 1.5rem;
+        font-family: "Fira Code", "Cascadia Code", monospace;
+        font-size: 14px;
+        outline: none;
+        resize: none;
+        border-right: 1px solid #333;
+        line-height: 1.5;
+      }
+
+      #preview-container {
+        flex: 1;
+        padding: 2rem;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: background 0.4s ease;
+        position: relative;
+      }
+      #preview {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      /* 按钮样式 */
+      select,
+      button {
+        padding: 0.5rem 0.8rem;
+        border-radius: 6px;
+        background: #333;
+        color: white;
+        border: 1px solid #444;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+      button:hover {
+        background: #444;
+        border-color: #666;
+      }
+      .btn-primary {
+        background: var(--accent);
+        border: none;
+        color: #1a1b26;
+        font-weight: bold;
+      }
+      .btn-primary:hover {
+        background: #89b4fa;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+      }
+      .btn-secondary:hover {
+        background: rgba(122, 162, 247, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo-area">
+        <strong style="font-size: 1.1rem">Beautiful Mermaid</strong>
+        <span id="save-status">已自动保存</span>
+      </div>
+      <div class="controls">
+        <select id="theme-select"></select>
+        <button class="btn-secondary" onclick="beautifyCode()">美化代码</button>
+        <button onclick="copyASCII()">复制 ASCII</button>
+        <button class="btn-primary" onclick="downloadSVG()">
+          下载 SVG图片
+        </button>
+      </div>
+    </header>
+    <main>
+      <textarea
+        id="editor"
+        spellcheck="false"
+        placeholder="输入 Mermaid 代码..."
+      ></textarea>
+      <div id="preview-container">
+        <div id="preview"></div>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/beautiful-mermaid/dist/beautiful-mermaid.browser.global.js"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const { renderMermaid, renderMermaidAscii, THEMES } = beautifulMermaid;
+        const editor = document.getElementById("editor");
+        const preview = document.getElementById("preview");
+        const themeSelect = document.getElementById("theme-select");
+        const previewContainer = document.getElementById("preview-container");
+        const saveStatus = document.getElementById("save-status");
+
+        // --- 1. 初始化 & 自动保存逻辑 ---
+        const STORAGE_KEY = "mermaid_code_cache";
+        const defaultCode =
+          "graph TD\n  A[自动保存] --> B[本地存储]\n  B --> C[刷新不丢失]";
+
+        // 从本地加载历史记录
+        editor.value = localStorage.getItem(STORAGE_KEY) || defaultCode;
+
+        Object.keys(THEMES).forEach((name) => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          themeSelect.appendChild(opt);
+        });
+        themeSelect.value =
+          localStorage.getItem("mermaid_theme_cache") || "tokyo-night";
+
+        // --- 2. 渲染与保存函数 ---
+        let saveTimeout;
+        async function updateAndSave() {
+          const code = editor.value;
+
+          // 实时渲染
+          try {
+            const theme = THEMES[themeSelect.value];
+            const svg = await renderMermaid(code.trim(), theme);
+            preview.innerHTML = svg;
+            previewContainer.style.backgroundColor = theme.bg;
+          } catch (e) {
+            /* 语法错误时不更新预览 */
+          }
+
+          // 自动保存防抖 (Debounce)
+          saveStatus.textContent = "保存中...";
+          saveStatus.style.opacity = "1";
+          clearTimeout(saveTimeout);
+          saveTimeout = setTimeout(() => {
+            localStorage.setItem(STORAGE_KEY, code);
+            localStorage.setItem("mermaid_theme_cache", themeSelect.value);
+            saveStatus.textContent = "已自动保存";
+            setTimeout(() => (saveStatus.style.opacity = "0.5"), 1000);
+          }, 800);
+        }
+
+        // --- 3. 代码美化逻辑 ---
+        window.beautifyCode = () => {
+          let lines = editor.value.split("\n");
+          let indent = 0;
+          const formatted = lines
+            .map((line) => {
+              line = line.trim();
+              if (!line) return "";
+              // 简单的缩进逻辑：第一行不缩进，后续行缩进 2 空格
+              const result = "  ".repeat(indent) + line;
+              if (line.includes("{") || line.endsWith("subgraph")) indent++;
+              if (line.includes("}") || line === "end")
+                indent = Math.max(0, indent - 1);
+              return result;
+            })
+            .join("\n");
+
+          editor.value = formatted;
+          updateAndSave();
+        };
+
+        // --- 4. 其它功能 ---
+        window.downloadSVG = () => {
+          const svg = preview.innerHTML;
+          const blob = new Blob([svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `mermaid-chart.svg`;
+          a.click();
+        };
+
+        window.copyASCII = () => {
+          const ascii = renderMermaidAscii(editor.value, { useAscii: false });
+          navigator.clipboard
+            .writeText(ascii)
+            .then(() => alert("已复制文本图表！"));
+        };
+
+        // 事件监听
+        editor.addEventListener("input", updateAndSave);
+        themeSelect.addEventListener("change", updateAndSave);
+        updateAndSave(); // 初始渲染
+      });
+    </script>
+  </body>
+</html>
